@@ -5,44 +5,25 @@ import { useAppStore } from '../store'
 import { calculateConsentRate } from '../utils/calculations'
 import NaverMap from '../components/common/NaverMap'
 
-// 슬라이드 아이템: 이미지 로드 실패 시 CSS 시각으로 대체
+// 슬라이드 아이템: 벡터 기반 SVG 비주얼 (무제한 해상도, 로딩 없음)
 function SlideItem({ slide, active }: { slide: Slide; active: boolean }) {
-  const [imgError, setImgError] = useState(false)
   return (
     <div className={`absolute inset-0 transition-opacity duration-1000 ${active ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
-      {!imgError ? (
-        <img
-          src={slide.src}
-          alt={slide.title}
-          className="w-full h-full object-cover"
-          onError={() => setImgError(true)}
-        />
-      ) : (
-        <div className="w-full h-full relative overflow-hidden">
-          {slide.visual}
-        </div>
-      )}
+      <div className="w-full h-full relative overflow-hidden">
+        {slide.visual}
+      </div>
     </div>
   )
 }
 
-// 썸네일: 이미지 없으면 그라디언트 배경 + 번호 표시
+// 썸네일: SVG 비주얼 축소 렌더
 function ThumbItem({ slide }: { slide: Slide }) {
-  const [imgError, setImgError] = useState(false)
-  if (!imgError) {
-    return (
-      <img
-        src={slide.src}
-        alt={slide.title}
-        className="w-full h-full object-cover"
-        onError={() => setImgError(true)}
-      />
-    )
-  }
   return (
     <div className={`w-full h-full bg-gradient-to-br ${slide.gradient} flex items-center justify-center relative overflow-hidden`}>
-      <div className="absolute inset-0 opacity-30">{slide.visual}</div>
-      <span className="text-white text-xs font-bold z-10 drop-shadow">{slide.tags[0]}</span>
+      <div className="absolute inset-0">{slide.visual}</div>
+      <span className="absolute bottom-1 left-1 right-1 text-white text-[10px] font-bold z-10 drop-shadow-md truncate text-center">
+        {slide.tags[0]}
+      </span>
     </div>
   )
 }
@@ -345,20 +326,14 @@ export default function PublicHome() {
   const [openFaq, setOpenFaq] = useState<number | null>(null)
   const buildingChartRef = useRef<HTMLDivElement>(null)
 
-  // 히어로 배경 이미지 (배경용 이미지 목록)
-  const heroBgImages = [
-    './images/slides/slide-09.jpg',
-    './images/slides/slide-03.jpg',
-    './images/slides/slide-06.jpg',
-    './images/slides/slide-08.jpg',
-    './images/slides/slide-01.jpg',
-  ]
+  // 히어로 배경: 슬라이드 SVG 비주얼을 순환 (벡터 기반 무손실 품질)
+  const heroBgIndices = [8, 2, 5, 7, 0]
   const [heroBgIdx, setHeroBgIdx] = useState(0)
 
   // 히어로 배경 자동 전환 (6초)
   useEffect(() => {
     const timer = setInterval(() => {
-      setHeroBgIdx((prev) => (prev + 1) % heroBgImages.length)
+      setHeroBgIdx((prev) => (prev + 1) % heroBgIndices.length)
     }, 6000)
     return () => clearInterval(timer)
   }, [])
@@ -503,30 +478,28 @@ export default function PublicHome() {
       </header>
 
       {/* ─── 히어로 섹션 ─── */}
-      <section className="relative min-h-[85vh] flex items-center overflow-hidden">
-        {/* 배경 이미지 (자동 슬라이드) */}
-        {heroBgImages.map((src, i) => (
-          <img
-            key={src}
-            src={src}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
+      <section className="relative min-h-[85vh] flex items-center overflow-hidden bg-gradient-to-br from-blue-900 via-blue-800 to-sky-900">
+        {/* 배경: 슬라이드 SVG 비주얼 순환 */}
+        {heroBgIndices.map((slideIdx, i) => (
+          <div
+            key={i}
+            className="absolute inset-0 transition-opacity duration-1000"
             style={{ opacity: i === heroBgIdx ? 1 : 0 }}
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-          />
+          >
+            {slides[slideIdx].visual}
+          </div>
         ))}
-        {/* 어두운 오버레이 */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/50 to-blue-900/60" />
-        {/* 이미지 없을 때 폴백 배경 */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-800 to-sky-900 -z-10" />
+        {/* 어두운 오버레이 — 텍스트 가독성 확보 */}
+        <div className="absolute inset-0 bg-gradient-to-br from-black/65 via-black/40 to-blue-900/55" />
 
         {/* 하단 페이드 인디케이터 */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-          {heroBgImages.map((_, i) => (
+          {heroBgIndices.map((_, i) => (
             <button
               key={i}
               onClick={() => setHeroBgIdx(i)}
               className={`w-2 h-2 rounded-full transition-all duration-300 ${i === heroBgIdx ? 'bg-white w-6' : 'bg-white/40'}`}
+              aria-label={`배경 ${i + 1}`}
             />
           ))}
         </div>
