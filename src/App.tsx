@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 
 // 공개 페이지 (주민용)
@@ -26,7 +26,7 @@ import Settings from './pages/Settings'
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Toaster position="top-right" />
       <Routes>
         {/* ── 공개 페이지 (주민용) ── */}
@@ -59,6 +59,6 @@ export default function App() {
         {/* 404 → 홈으로 */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   )
 }

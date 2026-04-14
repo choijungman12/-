@@ -86,7 +86,7 @@ function BuildingSilhouette({ color = '#fff', opacity = 0.15 }: { color?: string
 
 const slides: Slide[] = [
   {
-    src: '/images/slides/slide-01.jpg',
+    src: './images/slides/slide-01.jpg',
     title: '도시연결 재개발 조감도',
     desc: '교통 중심지와 연결되는 서울특별시 종로구 구기동 재개발 사업구역 전경',
     tags: ['평창동역', '성북·강역', '중심지 연결'],
@@ -110,7 +110,7 @@ const slides: Slide[] = [
     ),
   },
   {
-    src: '/images/slides/slide-02.jpg',
+    src: './images/slides/slide-02.jpg',
     title: '야간 주거단지 조감도',
     desc: '밤이 되어도 빛나는 고품격 친환경 주거환경 야간 렌더링',
     tags: ['야간 조감도', '고급 주거', '친환경 단지'],
@@ -134,7 +134,7 @@ const slides: Slide[] = [
     ),
   },
   {
-    src: '/images/slides/slide-03.jpg',
+    src: './images/slides/slide-03.jpg',
     title: '친환경 주거단지 조감도',
     desc: '북한산과 어우러진 자연 친화적 미래 주거단지 모습',
     tags: ['친환경', '북한산 조망', '자연 친화'],
@@ -154,7 +154,7 @@ const slides: Slide[] = [
     ),
   },
   {
-    src: '/images/slides/slide-04.jpg',
+    src: './images/slides/slide-04.jpg',
     title: '구기동 재개발 추진위원회',
     desc: '구기동 재개발 추진위원회 현장 전경 — 서울특별시 종로구',
     tags: ['추진위원회', '현장 전경', '종로구'],
@@ -176,7 +176,7 @@ const slides: Slide[] = [
     ),
   },
   {
-    src: '/images/slides/slide-05.jpg',
+    src: './images/slides/slide-05.jpg',
     title: '재개발 전후 비교',
     desc: '낡은 주거지에서 현대적 주거단지로, 새로운 재탄생의 모습',
     tags: ['재개발 전', '재개발 후', '주거환경 개선'],
@@ -208,7 +208,7 @@ const slides: Slide[] = [
     ),
   },
   {
-    src: '/images/slides/slide-06.jpg',
+    src: './images/slides/slide-06.jpg',
     title: '전체 조감도 (교통·입지 중심)',
     desc: '대중교통 접근성이 뛰어난 구기동 재개발 대단지 전체 조감도',
     tags: ['교통 중심', '입지 우수', '대단지'],
@@ -231,7 +231,7 @@ const slides: Slide[] = [
     ),
   },
   {
-    src: '/images/slides/slide-07.jpg',
+    src: './images/slides/slide-07.jpg',
     title: '재개발·재건축 통합 정보 플랫폼',
     desc: '서울특별시 종로구 재개발·재건축·도시개발 통합 정보 플랫폼',
     tags: ['통합 플랫폼', '스마트 서비스', '디지털 전환'],
@@ -261,7 +261,7 @@ const slides: Slide[] = [
     ),
   },
   {
-    src: '/images/slides/slide-08.jpg',
+    src: './images/slides/slide-08.jpg',
     title: '새로운 도시의 시작',
     desc: '구기동 재개발 추진위원회가 그리는 새로운 도시의 미래 비전',
     tags: ['비전 2030', '새로운 도시', '주거 혁신'],
@@ -284,7 +284,7 @@ const slides: Slide[] = [
     ),
   },
   {
-    src: '/images/slides/slide-09.jpg',
+    src: './images/slides/slide-09.jpg',
     title: '구기동 대단지 조감도',
     desc: '종로구 구기동 재개발 대단지 최종 완공 조감도',
     tags: ['대단지', '완공 조감도', '구기동'],
@@ -303,7 +303,7 @@ const slides: Slide[] = [
     ),
   },
   {
-    src: '/images/slides/slide-10.jpg',
+    src: './images/slides/slide-10.jpg',
     title: '도시계획 전략 지도',
     desc: '길동 전략거점 및 9호선 연장에 따른 도시계획 현황 지도',
     tags: ['길동 전략거점', '9호선 연장', '도시계획'],
@@ -347,11 +347,11 @@ export default function PublicHome() {
 
   // 히어로 배경 이미지 (배경용 이미지 목록)
   const heroBgImages = [
-    '/images/slides/slide-09.jpg',
-    '/images/slides/slide-03.jpg',
-    '/images/slides/slide-06.jpg',
-    '/images/slides/slide-08.jpg',
-    '/images/slides/slide-01.jpg',
+    './images/slides/slide-09.jpg',
+    './images/slides/slide-03.jpg',
+    './images/slides/slide-06.jpg',
+    './images/slides/slide-08.jpg',
+    './images/slides/slide-01.jpg',
   ]
   const [heroBgIdx, setHeroBgIdx] = useState(0)
 
