@@ -56,27 +56,22 @@ src/
 
 The repo deploys to GitHub Pages at `https://choijungman12.github.io/-/`. Multiple past sessions burned time on these gotchas:
 
-1. **Pages must be auto-enabled from the workflow.** `peaceiris/actions-gh-pages` pushes the `gh-pages` branch but does **not** turn Pages on, so the site stays 404. Use this exact workflow shape:
+1. **Pages must be turned on manually — once.** This was verified the hard way: both deployment paths fail from CI alone without a one-time human click.
+   - `peaceiris/actions-gh-pages@v4` **succeeds** at pushing `dist/` to the `gh-pages` branch (CI green), but the site stays **404** until somebody flips `Settings → Pages → Source: "Deploy from a branch" → gh-pages / /(root) → Save`.
+   - `actions/configure-pages@v5` with `enablement: true` **fails the job** at the "Setup Pages" step because the default `GITHUB_TOKEN` lacks permission to create a Pages site from nothing. It can only modify an existing one.
+   - **Conclusion**: use the `peaceiris` path (simpler, CI green), and record the one-time Settings click as a deployment prerequisite. Once Pages is enabled pointing at `gh-pages`, every subsequent push auto-redeploys.
    ```yaml
    permissions:
-     contents: read
-     pages: write
-     id-token: write
+     contents: write
    jobs:
-     build:
+     build-and-deploy:
        steps:
          - actions/checkout@v4
          - actions/setup-node@v4 (node 20)
          - npm install && npm run build
          - cp dist/index.html dist/404.html
          - touch dist/.nojekyll
-         - actions/configure-pages@v5  # with enablement: true
-         - actions/upload-pages-artifact@v3  # path: ./dist
-     deploy:
-       needs: build
-       environment: github-pages
-       steps:
-         - actions/deploy-pages@v4
+         - peaceiris/actions-gh-pages@v4  # publish_branch: gh-pages, force_orphan: true
    ```
 2. **`vite.config.ts` must have `base: './'`** so assets resolve correctly at any subpath (`/-/`).
 3. **React Router must be `HashRouter`.** `BrowserRouter` breaks direct URLs and refreshes at `/-/admin` — you'll see a 404 from Pages itself. The `404.html` copy is a belt-and-suspenders fallback for the rare case.
