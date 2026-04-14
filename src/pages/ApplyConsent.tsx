@@ -6,6 +6,7 @@ import {
   Download, ChevronRight, ArrowLeft, Lock, Clock,
   AlertCircle, Copy, Building2,
 } from 'lucide-react'
+import { openConsentPDF, type ConsentRecord } from '../utils/consentPDF'
 
 type Step = 'document' | 'form' | 'auth' | 'complete'
 type AuthMethod = 'kakao' | 'pass' | null
@@ -243,20 +244,30 @@ export default function ApplyConsent() {
     }, 2500)
   }
 
-  function handleFinalSubmit() {
-    const record = {
+  function buildRecord(): ConsentRecord {
+    return {
       certId, name: form.name, phone: form.phone,
       birthdate: form.birthdate, propertyAddress: form.propertyAddress,
       propertyType: form.propertyType, propertyArea: form.propertyArea,
       authMethod, carrier: carrier ?? null,
       signedAt,
+      signature: form.name,
       document: '정비계획 입안 동의서',
       project: '종로구 구기동 재개발정비사업',
     }
+  }
+
+  function handleFinalSubmit() {
+    const record = buildRecord()
     const prev = JSON.parse(localStorage.getItem('guki-consent-records') || '[]')
     localStorage.setItem('guki-consent-records', JSON.stringify([...prev, record]))
     setStep('complete')
-    toast.success('동의서가 제출되었습니다.')
+    toast.success('동의서가 제출되었습니다. 관리자 페이지에 자동 저장됩니다.')
+  }
+
+  function handleDownloadPDF() {
+    openConsentPDF(buildRecord())
+    toast.success('동의서 PDF 창이 열렸습니다. 인쇄 → PDF로 저장하세요.')
   }
 
   return (
@@ -753,7 +764,12 @@ export default function ApplyConsent() {
                       </div>
                       <div className="pt-3 mt-1 border-t border-dashed border-gray-200 text-center">
                         <p className="text-xs text-gray-600">위 내용에 동의하며 전자서명합니다.</p>
-                        <p className="text-base font-bold text-gray-900 mt-1">{form.name} <span className="text-gray-300">(서명)</span></p>
+                        <div className="mt-3 mx-auto max-w-xs border-2 border-blue-300 bg-blue-50/50 rounded-xl py-3 px-4">
+                          <p className="text-[10px] text-blue-500 font-medium mb-1">서 명 란 (본인인증으로 자동 등록)</p>
+                          <p className="text-2xl font-black text-gray-900 tracking-widest" style={{ fontFamily: '"Nanum Pen Script", cursive, serif' }}>
+                            {form.name}
+                          </p>
+                        </div>
                         <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-green-100 rounded-full text-xs text-green-700 font-medium">
                           <CheckCircle size={11} /> 전자서명 완료
                         </div>
@@ -815,7 +831,7 @@ export default function ApplyConsent() {
                   <Copy size={15} /> 접수번호 복사
                 </button>
                 <button
-                  onClick={() => toast.success('동의서 PDF가 저장되었습니다. (시뮬레이션)')}
+                  onClick={handleDownloadPDF}
                   className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl font-semibold transition-colors text-sm"
                 >
                   <Download size={15} /> PDF 저장

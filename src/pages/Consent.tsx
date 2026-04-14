@@ -1,14 +1,29 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { useAppStore } from '../store'
-import { FileCheck, Download, CheckCircle, XCircle, Clock, AlertCircle, ChevronRight } from 'lucide-react'
-import { formatKRW } from '../utils/calculations'
-import type { ConsentStatus } from '../types'
+import { FileCheck, Download, CheckCircle, XCircle, Clock, AlertCircle, ChevronRight, Smartphone, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { openConsentPDF, loadConsentRecords, type ConsentRecord } from '../utils/consentPDF'
 
 export default function Consent() {
   const { owners, updateConsentStatus } = useAppStore()
-  const [activeTab, setActiveTab] = useState<'status' | 'form' | 'verify'>('status')
+  const [activeTab, setActiveTab] = useState<'status' | 'electronic' | 'form' | 'verify'>('status')
+  const [records, setRecords] = useState<ConsentRecord[]>([])
+
+  useEffect(() => {
+    setRecords(loadConsentRecords())
+    const onStorage = () => setRecords(loadConsentRecords())
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
+
+  function deleteRecord(certId: string) {
+    if (!confirm(`접수번호 ${certId} 기록을 삭제하시겠습니까?`)) return
+    const next = records.filter(r => r.certId !== certId)
+    localStorage.setItem('guki-consent-records', JSON.stringify(next))
+    setRecords(next)
+    toast.success('삭제되었습니다.')
+  }
   const [selectedOwner, setSelectedOwner] = useState('')
   const [consentType, setConsentType] = useState<'agreed' | 'opposed'>('agreed')
   const [submitterName, setSubmitterName] = useState('')
@@ -113,6 +128,7 @@ export default function Consent() {
         <div className="flex gap-6">
           {[
             { key: 'status', label: '동의 현황' },
+            { key: 'electronic', label: `전자동의서 접수 (${records.length})` },
             { key: 'form', label: '동의서 접수' },
             { key: 'verify', label: '동의율 검증' },
           ].map((tab) => (
@@ -197,6 +213,98 @@ export default function Consent() {
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'electronic' && (
+        <div className="space-y-4">
+          <div className="card bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+            <div className="flex items-center gap-3">
+              <Smartphone size={24} className="flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="font-bold text-base">전자동의서 자동 접수 내역</h3>
+                <p className="text-xs text-blue-100 mt-0.5">
+                  홈페이지 → 추진위 동의 → 카카오/PASS 인증을 거쳐 제출된 전자동의서가 자동으로 여기에 저장됩니다.
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-black">{records.length}</p>
+                <p className="text-xs text-blue-100">건 접수됨</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900">추진위 구성원 (동의자) 목록</h3>
+              <p className="text-xs text-gray-400">전자서명 · 법적 효력 인정</p>
+            </div>
+            {records.length === 0 ? (
+              <div className="text-center py-16 text-gray-400">
+                <Smartphone size={40} className="mx-auto mb-3 text-gray-300" />
+                <p className="text-sm">아직 접수된 전자동의서가 없습니다.</p>
+                <p className="text-xs mt-1">홈페이지의 "추진위 동의" 버튼을 통해 동의서가 제출되면 자동으로 표시됩니다.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr>
+                      <th className="table-header">접수번호</th>
+                      <th className="table-header">동의자</th>
+                      <th className="table-header">연락처</th>
+                      <th className="table-header">소유 부동산</th>
+                      <th className="table-header">소유구분</th>
+                      <th className="table-header">인증수단</th>
+                      <th className="table-header">서명일시</th>
+                      <th className="table-header text-center">PDF</th>
+                      <th className="table-header text-center">삭제</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {records.map((r) => (
+                      <tr key={r.certId} className="hover:bg-blue-50/30">
+                        <td className="table-cell font-mono text-[11px] text-gray-500">{r.certId}</td>
+                        <td className="table-cell">
+                          <p className="font-semibold text-gray-900">{r.name}</p>
+                          <p className="text-[11px] text-gray-400">{r.birthdate}</p>
+                        </td>
+                        <td className="table-cell text-xs text-gray-600">{r.phone}</td>
+                        <td className="table-cell text-xs text-gray-600 max-w-[180px] truncate">{r.propertyAddress}</td>
+                        <td className="table-cell">
+                          <span className="badge-blue">{r.propertyType}</span>
+                          {r.propertyArea && <span className="ml-1 text-[11px] text-gray-400">{r.propertyArea}m²</span>}
+                        </td>
+                        <td className="table-cell">
+                          <span className={r.authMethod === 'kakao' ? 'badge-yellow' : 'badge-blue'}>
+                            {r.authMethod === 'kakao' ? '카카오' : `PASS${r.carrier ? ' · ' + r.carrier.toUpperCase() : ''}`}
+                          </span>
+                        </td>
+                        <td className="table-cell text-[11px] text-gray-500">{r.signedAt}</td>
+                        <td className="table-cell text-center">
+                          <button
+                            onClick={() => openConsentPDF(r)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium"
+                          >
+                            <Download size={12} /> PDF
+                          </button>
+                        </td>
+                        <td className="table-cell text-center">
+                          <button
+                            onClick={() => deleteRecord(r.certId)}
+                            className="p-1 rounded hover:bg-red-50 text-red-500"
+                            title="삭제"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}

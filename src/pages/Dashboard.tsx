@@ -1,10 +1,12 @@
+import { useEffect, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { useAppStore } from '../store'
-import { formatKRW, calculateConsentRate } from '../utils/calculations'
+import { calculateConsentRate } from '../utils/calculations'
+import { loadConsentRecords, type ConsentRecord } from '../utils/consentPDF'
 import {
   Users, MapPin, FileCheck, TrendingUp,
   AlertCircle, CheckCircle, Clock, ChevronRight,
-  Calendar, Building2
+  Calendar, Building2, Smartphone
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
@@ -33,6 +35,8 @@ const REQUIREMENTS = [
 
 export default function Dashboard() {
   const { project, owners, committeeMembers, schedules, notices } = useAppStore()
+  const [eRecords, setERecords] = useState<ConsentRecord[]>([])
+  useEffect(() => { setERecords(loadConsentRecords()) }, [])
 
   const totalOwners = owners.length
   const agreed   = owners.filter((o) => o.consentStatus === 'agreed').length
@@ -287,6 +291,58 @@ export default function Dashboard() {
             )
           })}
         </div>
+      </div>
+
+      {/* 전자동의서 자동 접수 현황 */}
+      <div className="card bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+              <Smartphone size={22} />
+            </div>
+            <div className="min-w-0">
+              <h3 className="font-bold text-base flex items-center gap-2">
+                전자동의서 자동 접수 현황
+                <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-medium">실시간</span>
+              </h3>
+              <p className="text-xs text-blue-100 mt-0.5">홈페이지 → 카카오/PASS 인증 → 자동 저장된 동의자 명부</p>
+            </div>
+          </div>
+          <Link to="/admin/consent" className="text-xs bg-white/15 hover:bg-white/25 px-3 py-1.5 rounded-lg flex items-center gap-1 flex-shrink-0 transition-colors">
+            전체 보기 <ChevronRight size={12} />
+          </Link>
+        </div>
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="bg-white/10 rounded-xl p-3">
+            <p className="text-xs text-blue-100">총 접수건수</p>
+            <p className="text-2xl font-black mt-0.5">{eRecords.length}<span className="text-sm font-normal"> 건</span></p>
+          </div>
+          <div className="bg-white/10 rounded-xl p-3">
+            <p className="text-xs text-blue-100">카카오 인증</p>
+            <p className="text-2xl font-black mt-0.5">{eRecords.filter(r => r.authMethod === 'kakao').length}<span className="text-sm font-normal"> 건</span></p>
+          </div>
+          <div className="bg-white/10 rounded-xl p-3">
+            <p className="text-xs text-blue-100">PASS 인증</p>
+            <p className="text-2xl font-black mt-0.5">{eRecords.filter(r => r.authMethod === 'pass').length}<span className="text-sm font-normal"> 건</span></p>
+          </div>
+        </div>
+        {eRecords.length > 0 && (
+          <div className="bg-white/10 rounded-xl p-3">
+            <p className="text-[11px] text-blue-100 mb-2 font-medium">최근 동의자 (최대 5명)</p>
+            <div className="space-y-1.5">
+              {eRecords.slice(-5).reverse().map((r) => (
+                <div key={r.certId} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <CheckCircle size={12} className="text-green-300 flex-shrink-0" />
+                    <span className="font-semibold">{r.name}</span>
+                    <span className="text-blue-200 truncate">· {r.propertyAddress}</span>
+                  </div>
+                  <span className="text-[10px] text-blue-200 font-mono flex-shrink-0 ml-2">{r.signedAt?.split(' ')[0] ?? ''}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 통계 카드 */}
