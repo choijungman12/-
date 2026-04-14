@@ -5,22 +5,44 @@ import { useAppStore } from '../store'
 import { calculateConsentRate } from '../utils/calculations'
 import NaverMap from '../components/common/NaverMap'
 
-// 슬라이드 아이템: 벡터 기반 SVG 비주얼 (무제한 해상도, 로딩 없음)
+// 슬라이드 아이템: 실제 사진(JPG) 우선, 로딩 실패 시 SVG 비주얼로 폴백
 function SlideItem({ slide, active }: { slide: Slide; active: boolean }) {
+  const [imgOk, setImgOk] = useState(true)
   return (
     <div className={`absolute inset-0 transition-opacity duration-1000 ${active ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
       <div className="w-full h-full relative overflow-hidden">
-        {slide.visual}
+        {imgOk ? (
+          <img
+            src={slide.src}
+            alt={slide.title}
+            className="w-full h-full object-cover"
+            loading="lazy"
+            onError={() => setImgOk(false)}
+          />
+        ) : (
+          slide.visual
+        )}
       </div>
     </div>
   )
 }
 
-// 썸네일: SVG 비주얼 축소 렌더
+// 썸네일: 실제 사진 우선, 실패 시 SVG 폴백
 function ThumbItem({ slide }: { slide: Slide }) {
+  const [imgOk, setImgOk] = useState(true)
   return (
     <div className={`w-full h-full bg-gradient-to-br ${slide.gradient} flex items-center justify-center relative overflow-hidden`}>
-      <div className="absolute inset-0">{slide.visual}</div>
+      {imgOk ? (
+        <img
+          src={slide.src}
+          alt={slide.title}
+          className="absolute inset-0 w-full h-full object-cover"
+          loading="lazy"
+          onError={() => setImgOk(false)}
+        />
+      ) : (
+        <div className="absolute inset-0">{slide.visual}</div>
+      )}
       <span className="absolute bottom-1 left-1 right-1 text-white text-[10px] font-bold z-10 drop-shadow-md truncate text-center">
         {slide.tags[0]}
       </span>
@@ -486,7 +508,7 @@ export default function PublicHome() {
             className="absolute inset-0 transition-opacity duration-1000"
             style={{ opacity: i === heroBgIdx ? 1 : 0 }}
           >
-            {slides[slideIdx].visual}
+            <SlideItem slide={slides[slideIdx]} active={true} />
           </div>
         ))}
         {/* 어두운 오버레이 — 텍스트 가독성 확보 */}
