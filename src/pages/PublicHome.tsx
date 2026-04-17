@@ -480,10 +480,19 @@ export default function PublicHome() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <h1 className="text-xl md:text-2xl font-bold text-blue-600">종로구 구기재개발추진위원회</h1>
           <nav className="hidden lg:flex space-x-8">
-            {['사업개요', '갤러리', '추진현황', '알림마당', '자료실', '참여마당'].map((item, i) => (
-              <a key={item} href={`#${['overview','gallery','status','notice','resources','participation'][i]}`}
-                className="text-gray-700 hover:text-blue-600 font-medium transition-colors">{item}</a>
-            ))}
+            {['사업개요', '갤러리', '추진현황', '알림마당', '자료실', '참여마당'].map((item, i) => {
+              const id = ['overview','gallery','status','notice','resources','participation'][i]
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  className="text-gray-700 hover:text-blue-600 font-medium transition-colors bg-transparent border-0 cursor-pointer p-0"
+                >
+                  {item}
+                </button>
+              )
+            })}
             <Link to="/project-info" className="text-blue-600 hover:text-blue-700 font-semibold transition-colors border-b-2 border-blue-600 pb-0.5">
               사업안내
             </Link>
@@ -1255,8 +1264,16 @@ export default function PublicHome() {
               <div>
                 <h4 className="font-bold mb-4">바로가기</h4>
                 <ul className="space-y-2">
-                  {[['사업개요', '#overview'], ['갤러리', '#gallery'], ['추진현황', '#status'], ['알림마당', '#notice'], ['자료실', '#resources'], ['참여마당', '#participation']].map(([label, href]) => (
-                    <li key={label}><a href={href} className="text-gray-400 hover:text-white text-sm transition-colors">{label}</a></li>
+                  {[['사업개요', 'overview'], ['갤러리', 'gallery'], ['추진현황', 'status'], ['알림마당', 'notice'], ['자료실', 'resources'], ['참여마당', 'participation']].map(([label, id]) => (
+                    <li key={label}>
+                      <button
+                        type="button"
+                        onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                        className="text-gray-400 hover:text-white text-sm transition-colors bg-transparent border-0 cursor-pointer p-0"
+                      >
+                        {label}
+                      </button>
+                    </li>
                   ))}
                 </ul>
               </div>
