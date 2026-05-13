@@ -4,6 +4,7 @@ import {
   ArrowLeft, Layers, MapPin, Building2,
   Calculator, TrendingUp, AlertCircle, CheckCircle, Info,
   Home, X, FileText, Shield, ChevronRight, Combine, BarChart3,
+  Search, Filter, Download,
 } from 'lucide-react'
 import {
   GUKI_PARCELS, type Parcel,
@@ -15,8 +16,18 @@ import {
   aggregateParcels, formatKRW, formatPyeong,
 } from '../utils/appraisal'
 import RealParcelMap, { type LayerMode } from '../components/common/RealParcelMap'
+import { openParcelReport } from '../utils/parcelReport'
 
 type DetailTab = 'land' | 'building' | 'usePlan' | 'appraisal'
+type QuickFilter = 'none' | 'redevelopable' | 'aged30' | 'blocked' | 'hasSale'
+
+const QUICK_FILTERS: Record<QuickFilter, { label: string; icon: string }> = {
+  none:           { label: '전체',           icon: '🔘' },
+  redevelopable:  { label: '재개발 적격만',  icon: '🏗️' },
+  aged30:         { label: '30년+ 노후',    icon: '🏚️' },
+  blocked:        { label: '맹지',           icon: '🚧' },
+  hasSale:        { label: '거래 있음',      icon: '💰' },
+}
 
 const LAYER_META: Record<LayerMode, { label: string; desc: string; icon: string }> = {
   age:       { label: '노후도',       desc: '준공연도 기반 건물 노후 등급',       icon: '🏚️' },
@@ -30,6 +41,9 @@ export default function GisAnalysis() {
   const [selected, setSelected] = useState<Parcel[]>([])
   const [mergeMode, setMergeMode] = useState(false)
   const [detailTab, setDetailTab] = useState<DetailTab>('land')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>('none')
+  const [focusParcel, setFocusParcel] = useState<Parcel | null>(null)
 
   function toggleParcel(p: Parcel) {
     setSelected((prev) => {
@@ -38,6 +52,24 @@ export default function GisAnalysis() {
       return mergeMode ? [...prev, p] : [p]
     })
   }
+
+  // 검색 + 필터 적용된 필지 목록 — 지도에서 강조될 대상
+  const filteredParcels = useMemo(() => {
+    let list = GUKI_PARCELS
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase()
+      list = list.filter(p =>
+        p.jibun.toLowerCase().includes(q) ||
+        p.roadAddr.toLowerCase().includes(q) ||
+        p.landRegistry.owner.toLowerCase().includes(q)
+      )
+    }
+    if (quickFilter === 'redevelopable') list = list.filter(p => isRedevelopable(p).yes)
+    if (quickFilter === 'aged30')        list = list.filter(p => gradeAge(p) === 'severely-aged')
+    if (quickFilter === 'blocked')       list = list.filter(p => gradeRoad(p) === 'blocked')
+    if (quickFilter === 'hasSale')       list = list.filter(p => !!p.recentSale)
+    return list
+  }, [searchQuery, quickFilter])
 
   const aggregated = useMemo(() => aggregateParcels(selected), [selected])
   const stats = useMemo(() => {
@@ -108,6 +140,68 @@ export default function GisAnalysis() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm overflow-hidden">
             <div className="border-b border-gray-100 p-4 space-y-3">
+              {/* 지번/소유자/주소 검색 */}
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="지번·도로명·소유자 검색 (예: 138-1)"
+                  className="w-full pl-9 pr-9 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700">
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              {/* 빠른 필터 칩 */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                <Filter size={12} className="text-gray-400 flex-shrink-0" />
+                {(Object.keys(QUICK_FILTERS) as QuickFilter[]).map(k => (
+                  <button
+                    key={k}
+                    onClick={() => setQuickFilter(k)}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium border whitespace-nowrap transition-all flex-shrink-0 ${
+                      quickFilter === k
+                        ? 'bg-blue-600 border-blue-700 text-white'
+                        : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300'
+                    }`}
+                  >
+                    {QUICK_FILTERS[k].icon} {QUICK_FILTERS[k].label}
+                  </button>
+                ))}
+                {(searchQuery || quickFilter !== 'none') && (
+                  <span className="text-[10px] text-gray-500 ml-auto flex-shrink-0">
+                    매칭 <strong className="text-blue-600">{filteredParcels.length}</strong> / {GUKI_PARCELS.length}
+                  </span>
+                )}
+              </div>
+
+              {/* 검색 결과 목록 (검색어 있고 결과 1~10개일 때만 노출) */}
+              {searchQuery && filteredParcels.length > 0 && filteredParcels.length <= 10 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 space-y-1 max-h-40 overflow-y-auto">
+                  {filteredParcels.map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        setFocusParcel(p)
+                        if (!mergeMode) setSelected([p])
+                        setSearchQuery('')
+                      }}
+                      className="w-full text-left p-1.5 rounded hover:bg-white text-xs flex items-center gap-2"
+                    >
+                      <MapPin size={11} className="text-blue-600 flex-shrink-0" />
+                      <span className="font-semibold text-gray-900">{p.jibun}</span>
+                      <span className="text-[10px] text-gray-500 truncate">{p.bldgType} · {p.landRegistry.owner}</span>
+                      <ChevronRight size={11} className="text-gray-400 ml-auto" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Combine size={16} className="text-purple-600" />
@@ -156,6 +250,7 @@ export default function GisAnalysis() {
                 layer={layer}
                 mergeMode={mergeMode}
                 onToggleSelect={toggleParcel}
+                focusParcel={focusParcel}
                 height="620px"
               />
 
@@ -266,12 +361,23 @@ export default function GisAnalysis() {
             {single && singleAppraisal && (
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                 <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white p-4">
-                  <p className="text-xs text-slate-400 uppercase tracking-widest">지적도 조회 결과</p>
-                  <h3 className="font-bold text-xl mt-0.5">
-                    {single.jibun} <span className="text-sm font-normal text-slate-400">· {single.bldgType}</span>
-                  </h3>
-                  <p className="text-xs text-slate-300 mt-1">{single.fullJibun}</p>
-                  <p className="text-xs text-slate-400">{single.roadAddr}</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs text-slate-400 uppercase tracking-widest">지적도 조회 결과</p>
+                      <h3 className="font-bold text-xl mt-0.5">
+                        {single.jibun} <span className="text-sm font-normal text-slate-400">· {single.bldgType}</span>
+                      </h3>
+                      <p className="text-xs text-slate-300 mt-1">{single.fullJibun}</p>
+                      <p className="text-xs text-slate-400">{single.roadAddr}</p>
+                    </div>
+                    <button
+                      onClick={() => openParcelReport(single)}
+                      className="flex items-center gap-1 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white text-[11px] font-semibold rounded-lg transition-colors flex-shrink-0"
+                      title="이 필지 통합조회 리포트 PDF 출력"
+                    >
+                      <Download size={11} /> PDF
+                    </button>
+                  </div>
                 </div>
 
                 <div className="border-b border-gray-200 flex overflow-x-auto">

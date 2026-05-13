@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { MapContainer, TileLayer, LayersControl, Polygon, Tooltip, Marker, Polyline } from 'react-leaflet'
+import { useEffect, useMemo } from 'react'
+import { MapContainer, TileLayer, LayersControl, Polygon, Tooltip, Marker, Polyline, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import {
@@ -104,16 +104,28 @@ function mergedOutlineSegments(selected: Parcel[]): Array<Array<[number, number]
   })
 }
 
+// 지도 패닝/줌 컨트롤러 — 외부에서 focusParcel을 받아 해당 위치로 부드럽게 이동
+function MapController({ focusParcel }: { focusParcel: Parcel | null }) {
+  const map = useMap()
+  useEffect(() => {
+    if (!focusParcel) return
+    const [lat, lng] = parcelCenter(focusParcel)
+    map.flyTo([lat, lng], 18, { duration: 0.8 })
+  }, [focusParcel, map])
+  return null
+}
+
 interface Props {
   parcels: Parcel[]
   selected: Parcel[]
   layer: LayerMode
   mergeMode: boolean
   onToggleSelect: (p: Parcel) => void
+  focusParcel?: Parcel | null
   height?: string
 }
 
-export default function RealParcelMap({ parcels, selected, layer, mergeMode, onToggleSelect, height = '620px' }: Props) {
+export default function RealParcelMap({ parcels, selected, layer, mergeMode, onToggleSelect, focusParcel = null, height = '620px' }: Props) {
   const selectedIds = useMemo(() => new Set(selected.map(s => s.id)), [selected])
   const mergedRings = useMemo(() => (mergeMode && selected.length > 1 ? mergedOutlineSegments(selected) : []), [mergeMode, selected])
 
@@ -125,6 +137,7 @@ export default function RealParcelMap({ parcels, selected, layer, mergeMode, onT
         scrollWheelZoom
         style={{ height: '100%', width: '100%' }}
       >
+        <MapController focusParcel={focusParcel} />
         <LayersControl position="topright">
           <LayersControl.BaseLayer checked name="위성지도 (Esri)">
             <TileLayer
