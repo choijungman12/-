@@ -118,6 +118,34 @@ export const GUKI_PARCELS: Parcel[] = [
 ]
 
 // ────────────────────────────────────────────────────────────────────
+// SVG 정규화 좌표 → 실제 lat/lng 변환 (Leaflet 지도용)
+// 사업구역 중심: 서울특별시 종로구 구기동 138-1 (37.6035, 126.9598)
+// ────────────────────────────────────────────────────────────────────
+const CENTER_LAT = 37.6035
+const CENTER_LNG = 126.9598
+const SPAN_LNG = 0.0042  // 약 370m
+const SPAN_LAT = 0.0032  // 약 355m
+
+export function svgToLatLng(x: number, y: number): [number, number] {
+  const lng = CENTER_LNG + (x - 50) / 100 * SPAN_LNG
+  const lat = CENTER_LAT - (y - 37.5) / 75 * SPAN_LAT
+  return [lat, lng]
+}
+
+export function parcelLatLngPolygon(p: Parcel): Array<[number, number]> {
+  return p.poly.map(([x, y]) => svgToLatLng(x, y))
+}
+
+export function parcelCenter(p: Parcel): [number, number] {
+  const cx = (p.poly[0][0] + p.poly[2][0]) / 2
+  const cy = (p.poly[0][1] + p.poly[2][1]) / 2
+  return svgToLatLng(cx, cy)
+}
+
+export const MAP_CENTER: [number, number] = [CENTER_LAT, CENTER_LNG]
+export const MAP_DEFAULT_ZOOM = 17
+
+// ────────────────────────────────────────────────────────────────────
 // 데이터 로더 — 향후 V-World API 연결 시 이 함수만 교체
 // ────────────────────────────────────────────────────────────────────
 export async function loadParcels(): Promise<Parcel[]> {

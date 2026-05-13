@@ -14,8 +14,7 @@ import {
   isRedevelopable,
   aggregateParcels, formatKRW, formatPyeong,
 } from '../utils/appraisal'
-
-type LayerMode = 'age' | 'road' | 'redevelop' | 'price'
+import RealParcelMap, { type LayerMode } from '../components/common/RealParcelMap'
 
 const LAYER_META: Record<LayerMode, { label: string; desc: string }> = {
   age:       { label: '노후도',       desc: '준공연도 기반 건물 노후 등급' },
@@ -24,18 +23,9 @@ const LAYER_META: Record<LayerMode, { label: string; desc: string }> = {
   price:     { label: '실거래가',     desc: '최근 1~2년 거래 사례' },
 }
 
-function getParcelColor(p: Parcel, mode: LayerMode): string {
-  if (mode === 'age') return AGE_GRADE_META[gradeAge(p)].color
-  if (mode === 'road') return ROAD_GRADE_META[gradeRoad(p)].color
-  if (mode === 'redevelop') return isRedevelopable(p).yes ? '#dc2626' : '#cbd5e1'
-  if (mode === 'price') return p.recentSale ? '#3b82f6' : '#e5e7eb'
-  return '#cbd5e1'
-}
-
 export default function GisAnalysis() {
   const [layer, setLayer] = useState<LayerMode>('age')
   const [selected, setSelected] = useState<Parcel[]>([])
-  const [hovered, setHovered] = useState<string | null>(null)
 
   function toggleParcel(p: Parcel) {
     setSelected((prev) => prev.find(x => x.id === p.id) ? prev.filter(x => x.id !== p.id) : [...prev, p])
@@ -124,147 +114,53 @@ export default function GisAnalysis() {
               </div>
             </div>
 
-            {/* SVG 지도 */}
-            <div className="relative bg-gradient-to-br from-emerald-50 via-slate-50 to-amber-50">
-              <svg viewBox="0 0 100 75" className="w-full h-auto" preserveAspectRatio="xMidYMid meet">
-                {/* 배경: 도로망 시뮬레이션 */}
-                <rect width="100" height="75" fill="#f8fafc" />
-                {/* 산 음영 (북서쪽 북한산 자락) */}
-                <ellipse cx="-5" cy="-5" rx="35" ry="25" fill="#86efac" opacity="0.25" />
-                <ellipse cx="105" cy="80" rx="40" ry="20" fill="#fde68a" opacity="0.2" />
+            {/* 실제 위성 지도 + 필지 오버레이 */}
+            <div className="relative">
+              <RealParcelMap
+                parcels={GUKI_PARCELS}
+                selected={selected}
+                layer={layer}
+                onToggleSelect={toggleParcel}
+                height="560px"
+              />
 
-                {/* 도로 (광대로 - 진흥로) */}
-                <rect x="0" y="68" width="100" height="3.5" fill="#94a3b8" opacity="0.6" />
-                <text x="50" y="71" fontSize="1.4" fill="#475569" textAnchor="middle" fontWeight="bold">진흥로 (광대로)</text>
-                {/* 중로 */}
-                <rect x="6"  y="0" width="1.5" height="68" fill="#94a3b8" opacity="0.5" />
-                <rect x="86" y="0" width="1.5" height="68" fill="#94a3b8" opacity="0.5" />
-                {/* 소로 */}
-                {[19, 32, 45, 58, 71].map(x => (
-                  <rect key={x} x={x} y="0" width="0.8" height="68" fill="#cbd5e1" opacity="0.5" />
-                ))}
-                {[19, 31, 43, 55].map(y => (
-                  <rect key={y} x="0" y={y} width="100" height="0.8" fill="#cbd5e1" opacity="0.5" />
-                ))}
-
-                {/* 필지들 */}
-                {GUKI_PARCELS.map(p => {
-                  const isSelected = selected.find(s => s.id === p.id)
-                  const isHovered = hovered === p.id
-                  const fill = getParcelColor(p, layer)
-                  const points = p.poly.map(([x, y]) => `${x},${y}`).join(' ')
-                  return (
-                    <g key={p.id} className="cursor-pointer" onClick={() => toggleParcel(p)}
-                       onMouseEnter={() => setHovered(p.id)} onMouseLeave={() => setHovered(null)}>
-                      <polygon
-                        points={points}
-                        fill={fill}
-                        fillOpacity={isSelected ? 0.95 : isHovered ? 0.85 : 0.72}
-                        stroke={isSelected ? '#1d4ed8' : '#475569'}
-                        strokeWidth={isSelected ? 0.45 : 0.18}
-                      />
-                      {/* 선택된 필지 표시 */}
-                      {isSelected && (
-                        <circle
-                          cx={(p.poly[0][0] + p.poly[2][0]) / 2}
-                          cy={(p.poly[0][1] + p.poly[2][1]) / 2}
-                          r="1.6" fill="#1d4ed8" stroke="#fff" strokeWidth="0.3"
-                        />
-                      )}
-                      {/* 실거래가 모드일 때 가격 마커 */}
-                      {layer === 'price' && p.recentSale && (
-                        <g>
-                          <rect
-                            x={(p.poly[0][0] + p.poly[2][0]) / 2 - 3.5}
-                            y={(p.poly[0][1] + p.poly[2][1]) / 2 - 1.6}
-                            width="7" height="3.2" rx="0.5"
-                            fill="#1d4ed8" stroke="#fff" strokeWidth="0.15"
-                          />
-                          <text
-                            x={(p.poly[0][0] + p.poly[2][0]) / 2}
-                            y={(p.poly[0][1] + p.poly[2][1]) / 2 + 0.3}
-                            fontSize="1.4" fill="#fff" textAnchor="middle" fontWeight="bold"
-                          >
-                            {(p.recentSale.price / 10000).toFixed(1)}억
-                          </text>
-                        </g>
-                      )}
-                      {/* 지번 라벨 (호버/선택 시) */}
-                      {(isHovered || isSelected) && layer !== 'price' && (
-                        <text
-                          x={(p.poly[0][0] + p.poly[2][0]) / 2}
-                          y={(p.poly[0][1] + p.poly[2][1]) / 2 + 0.5}
-                          fontSize="1.3" fill="#0f172a" textAnchor="middle" fontWeight="bold"
-                          style={{ paintOrder: 'stroke', stroke: '#fff', strokeWidth: 0.4, strokeLinejoin: 'round' }}
-                        >
-                          {p.jibun}
-                        </text>
-                      )}
-                    </g>
-                  )
-                })}
-
-                {/* 사업구역 경계 */}
-                <rect x="6" y="6" width="82" height="62" fill="none"
-                  stroke="#dc2626" strokeWidth="0.5" strokeDasharray="1.5,0.8" opacity="0.8" />
-                <text x="48" y="5" fontSize="1.6" fill="#dc2626" textAnchor="middle" fontWeight="bold">
-                  구기2지구 정비구역 (시뮬레이션)
-                </text>
-              </svg>
-
-              {/* 범례 (지도 우측 하단) */}
-              <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur rounded-xl p-3 shadow-lg border border-gray-200 text-xs max-w-[200px]">
+              {/* 범례 (지도 좌측 하단) */}
+              <div className="absolute bottom-3 left-3 bg-white/95 backdrop-blur rounded-xl p-3 shadow-lg border border-gray-200 text-xs max-w-[220px] z-[400]">
                 <p className="font-bold text-gray-700 mb-2 flex items-center gap-1">
-                  <Info size={11} /> 범례
+                  <Info size={11} /> {LAYER_META[layer].label} 범례
                 </p>
                 {layer === 'age' && Object.entries(AGE_GRADE_META).map(([k, m]) => (
                   <div key={k} className="flex items-center gap-2 py-0.5">
-                    <span className="w-3 h-3 rounded" style={{ background: m.color }} />
-                    <span className="text-[11px] text-gray-700">{m.label}</span>
+                    <span className="w-3 h-3 rounded flex-shrink-0" style={{ background: m.color }} />
+                    <span className="text-[11px] text-gray-700">{m.label} — {m.description}</span>
                   </div>
                 ))}
                 {layer === 'road' && Object.entries(ROAD_GRADE_META).map(([k, m]) => (
                   <div key={k} className="flex items-center gap-2 py-0.5">
-                    <span className="w-3 h-3 rounded" style={{ background: m.color }} />
+                    <span className="w-3 h-3 rounded flex-shrink-0" style={{ background: m.color }} />
                     <span className="text-[11px] text-gray-700">{m.label}</span>
                   </div>
                 ))}
                 {layer === 'redevelop' && (
                   <>
-                    <div className="flex items-center gap-2 py-0.5"><span className="w-3 h-3 rounded bg-red-600" /><span className="text-[11px]">재개발 적격</span></div>
-                    <div className="flex items-center gap-2 py-0.5"><span className="w-3 h-3 rounded bg-slate-300" /><span className="text-[11px]">기준 미달</span></div>
+                    <div className="flex items-center gap-2 py-0.5"><span className="w-3 h-3 rounded bg-red-600 flex-shrink-0" /><span className="text-[11px]">재개발 적격 (도정법 제8조)</span></div>
+                    <div className="flex items-center gap-2 py-0.5"><span className="w-3 h-3 rounded bg-slate-400 flex-shrink-0" /><span className="text-[11px]">기준 미달</span></div>
                   </>
                 )}
                 {layer === 'price' && (
                   <>
-                    <div className="flex items-center gap-2 py-0.5"><span className="w-3 h-3 rounded bg-blue-600" /><span className="text-[11px]">최근 거래 있음</span></div>
-                    <div className="flex items-center gap-2 py-0.5"><span className="w-3 h-3 rounded bg-gray-200" /><span className="text-[11px]">거래 없음</span></div>
+                    <div className="flex items-center gap-2 py-0.5"><span className="w-3 h-3 rounded bg-blue-700 flex-shrink-0" /><span className="text-[11px]">최근 1~2년 거래 사례</span></div>
+                    <div className="flex items-center gap-2 py-0.5"><span className="w-3 h-3 rounded bg-slate-400 flex-shrink-0" /><span className="text-[11px]">거래 없음</span></div>
                   </>
                 )}
               </div>
 
-              {/* 호버 툴팁 */}
-              {hovered && (
-                <div className="absolute top-3 left-3 bg-white/95 backdrop-blur rounded-xl p-3 shadow-lg border border-gray-200 text-xs">
-                  {(() => {
-                    const p = GUKI_PARCELS.find(x => x.id === hovered)!
-                    const age = gradeAge(p)
-                    return (
-                      <>
-                        <p className="font-bold text-gray-900">{p.jibun} <span className="text-[10px] font-normal text-gray-500">{p.bldgType}</span></p>
-                        <p className="text-[11px] text-gray-600 mt-0.5">
-                          {p.areaM2}㎡ ({formatPyeong(p.areaM2)}) · {p.zoning}
-                        </p>
-                        <div className="flex items-center gap-1 mt-1 text-[11px]">
-                          <span className="w-2 h-2 rounded-full" style={{ background: AGE_GRADE_META[age].color }} />
-                          <span className="text-gray-700">{AGE_GRADE_META[age].label} ({p.buildYear || '-'}년 준공)</span>
-                        </div>
-                      </>
-                    )
-                  })()}
-                </div>
-              )}
+              {/* 사용 안내 (지도 상단) */}
+              <div className="absolute top-3 left-3 bg-blue-600/95 backdrop-blur text-white rounded-xl px-3 py-2 shadow-lg text-xs font-medium z-[400] flex items-center gap-1.5 pointer-events-none">
+                <MapPin size={12} /> 필지를 클릭하면 선택 · 우측에서 분석 결과 확인
+              </div>
             </div>
+
           </div>
 
           {/* 사이드 패널 */}

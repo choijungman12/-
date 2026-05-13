@@ -22,6 +22,7 @@ This file is auto-loaded by Claude Code whenever a session is opened in this rep
 - **React Router v6** — **HashRouter** (not BrowserRouter, see "Deploy" below)
 - **ECharts** via `echarts-for-react` for all charts
 - `react-hot-toast` for notifications
+- **Leaflet + react-leaflet** for interactive parcel maps with satellite/street tiles (Esri World Imagery + Carto labels — no API key required). Used by `src/components/common/RealParcelMap.tsx` on `/gis-analysis`.
 - **No** `jspdf`, `html2canvas`, Kakao JS SDK, or backend. Do **not** add these without explicit approval.
 
 ### tsconfig highlights
@@ -88,6 +89,7 @@ The repo deploys to GitHub Pages at `https://choijungman12.github.io/-/`. Multip
 - **KakaoMap → Google Maps iframe.** The file `src/components/common/KakaoMap.tsx` keeps its name (many call sites import it) but renders `<iframe src="https://maps.google.com/maps?q=...&output=embed">`. Kakao JS SDK needs an API key that wasn't available — this was the reliable fallback. Don't rename or restore the SDK without re-verifying the key story.
 - **PDF generation without jsPDF.** `src/utils/consentPDF.ts` builds a self-contained printable HTML string, wraps it in a `Blob`, opens via `window.open`, and lets the user print-to-PDF from the browser. This sidesteps jsPDF's Korean font embedding problems and keeps the bundle smaller.
 - **Hero images are inline SVG**, not JPG. `PublicHome.tsx`'s `slides[i].visual` is a React node, rendered via `SlideItem`. This gives infinite resolution and zero asset loading. If asked to "improve image quality" further, build more SVGs rather than swapping in raster files.
+- **GIS map without API keys.** `RealParcelMap.tsx` uses Leaflet with Esri World Imagery as satellite base + Carto labels overlay. Google Maps / Kakao Maps SDKs were avoided because both require paid API keys and have CORS restrictions for parcel-level government data. Parcel polygons are computed from `Parcel.poly` (SVG normalized 0..100) via `svgToLatLng()` centered on 37.6035, 126.9598 with ~370m × ~355m span.
 
 ## Data model
 
