@@ -7,6 +7,7 @@ import Apply from './pages/Apply'
 import ApplyConsent from './pages/ApplyConsent'
 import ProjectInfo from './pages/ProjectInfo'
 import MyShare from './pages/MyShare'
+import GisAnalysis from './pages/GisAnalysis'
 
 // 관리자 레이아웃 + 페이지
 import Layout from './components/layout/Layout'
@@ -38,6 +39,8 @@ export default function App() {
         <Route path="/project-info" element={<ProjectInfo />} />
         {/* 내 분담금 시뮬레이터 (지도 + 평형 선택 + 자동 산출) */}
         <Route path="/my-share" element={<MyShare />} />
+        {/* GIS 분석 + 감정평가 시뮬레이터 (노후도·접도율·재개발 적격성 + 평가액) */}
+        <Route path="/gis-analysis" element={<GisAnalysis />} />
 
         {/* ── 관리자 대시보드 ── */}
         <Route path="/admin" element={<Layout />}>

@@ -412,43 +412,140 @@ export default function PublicHome() {
     }],
   }
 
+  // 동의서 제출 현황 — 시간 효과(애니메이션) + 자간 정리
   const consentChartOption = {
-    animation: false,
-    tooltip: { trigger: 'axis' },
-    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    // ── 시간적 애니메이션 효과 ────────────────────────────────────
+    animation: true,
+    animationDuration: 1600,
+    animationEasing: 'cubicOut',
+    animationDelay: (idx: number) => idx * 120,
+
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(17,24,39,0.96)',
+      borderColor: '#374151',
+      borderWidth: 1,
+      padding: [10, 14],
+      textStyle: { color: '#f9fafb', fontSize: 12, fontFamily: 'Noto Sans KR, sans-serif' },
+      axisPointer: { type: 'line', lineStyle: { color: '#3b82f6', width: 1, type: 'dashed' } },
+      formatter: (params: unknown[]) => {
+        const arr = params as Array<{ seriesName: string; value: number | null; name: string; color: string }>
+        const month = arr[0]?.name ?? ''
+        const lines = arr
+          .filter(p => p.seriesName && p.value !== null && p.value !== undefined)
+          .map(p => `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:6px"></span>${p.seriesName} <strong style="margin-left:8px">${p.value}%</strong>`)
+        return `<div style="font-weight:700;margin-bottom:6px;letter-spacing:0.2px">${month}</div>${lines.join('<br/>')}`
+      },
+    },
+
+    // 그리드: 범례·축 라벨이 충돌하지 않도록 충분한 여백
+    grid: { left: 56, right: 24, top: 32, bottom: 64, containLabel: false },
+
+    // X축 — 자간 정리 + 폰트 명시
     xAxis: {
       type: 'category',
       data: ['1월', '2월', '3월', '4월', '5월(예상)', '6월(목표)'],
-      axisLabel: { color: '#1f2937' },
+      boundaryGap: false,
+      axisLabel: {
+        color: '#475569',
+        fontSize: 11,
+        fontFamily: 'Noto Sans KR, sans-serif',
+        margin: 12,
+        interval: 0,
+      },
+      axisLine: { lineStyle: { color: '#e2e8f0' } },
+      axisTick: { show: false },
     },
+
+    // Y축
     yAxis: {
-      type: 'value', name: '동의율 (%)', min: 0, max: 100,
-      axisLabel: { color: '#1f2937', formatter: '{value}%' },
-      splitLine: { lineStyle: { color: '#e5e7eb' } },
+      type: 'value',
+      name: '동의율 (%)',
+      nameLocation: 'end',
+      nameGap: 14,
+      nameTextStyle: { color: '#94a3b8', fontSize: 10, fontFamily: 'Noto Sans KR, sans-serif', padding: [0, 32, 0, 0] },
+      min: 0, max: 100, interval: 25,
+      axisLabel: {
+        color: '#94a3b8', fontSize: 10,
+        fontFamily: 'Noto Sans KR, sans-serif',
+        formatter: '{value}%',
+        margin: 8,
+      },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
     },
+
     series: [
       {
-        name: '동의율',
+        name: '실적 동의율',
         type: 'line',
-        smooth: true,
+        smooth: 0.4,
         data: [25, 38, null, 60, null, null],
-        itemStyle: { color: '#57b5e7' },
         connectNulls: false,
-        lineStyle: { width: 3 },
-        areaStyle: { color: 'rgba(87,181,231,0.2)' },
-        symbol: 'none',
+        symbol: 'circle',
+        symbolSize: 9,
+        itemStyle: { color: '#3b82f6', borderWidth: 2, borderColor: '#fff' },
+        lineStyle: { width: 3.5, color: '#3b82f6', shadowColor: 'rgba(59,130,246,0.35)', shadowBlur: 8, shadowOffsetY: 3 },
+        areaStyle: {
+          color: {
+            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(59,130,246,0.32)' },
+              { offset: 1, color: 'rgba(59,130,246,0.02)' },
+            ],
+          },
+        },
+        emphasis: { focus: 'series', scale: 1.2 },
+        z: 3,
+        // 현재 시점 표시 (시간 효과)
+        markLine: {
+          silent: true,
+          symbol: 'none',
+          lineStyle: { color: '#22c55e', width: 1.5, type: 'dotted' },
+          label: { show: true, position: 'end', color: '#16a34a', fontSize: 10, fontFamily: 'Noto Sans KR, sans-serif', formatter: '목표 50%' },
+          data: [{ yAxis: 50 }],
+        },
+        markPoint: {
+          symbol: 'pin',
+          symbolSize: 44,
+          data: [{ name: '현재', coord: ['4월', 60], value: '현재' }],
+          itemStyle: { color: '#3b82f6' },
+          label: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
+        },
       },
       {
-        name: '목표 동의율',
+        name: '목표 추이',
         type: 'line',
-        smooth: true,
+        smooth: 0.4,
         data: [20, 30, 40, 45, 50, 55],
-        itemStyle: { color: '#fc8d62' },
-        lineStyle: { width: 3, type: 'dashed' },
         symbol: 'none',
+        itemStyle: { color: '#f97316' },
+        lineStyle: { width: 2.5, type: 'dashed', color: '#f97316' },
+        z: 2,
+        // 예측 구간 음영 (시간 효과)
+        markArea: {
+          silent: true,
+          itemStyle: { color: 'rgba(249,115,22,0.06)' },
+          label: { show: true, position: 'insideTop', color: '#fb923c', fontSize: 9, fontFamily: 'Noto Sans KR, sans-serif', formatter: '예측 구간' },
+          data: [[{ xAxis: '4월' }, { xAxis: '6월(목표)' }]],
+        },
       },
     ],
-    legend: { bottom: 0 },
+
+    // 범례 — 자간/간격 충분히 확보
+    legend: {
+      bottom: 4,
+      itemWidth: 14,
+      itemHeight: 10,
+      itemGap: 24,
+      icon: 'roundRect',
+      textStyle: { color: '#475569', fontSize: 11, fontFamily: 'Noto Sans KR, sans-serif', padding: [0, 0, 0, 4] },
+      data: [
+        { name: '실적 동의율', icon: 'circle' },
+        { name: '목표 추이',   icon: 'roundRect' },
+      ],
+    },
   }
 
   const faqs = [
@@ -561,6 +658,10 @@ export default function PublicHome() {
               <Link to="/my-share"
                 className="bg-amber-500 hover:bg-amber-400 text-white px-8 py-4 rounded-xl text-base font-semibold transition-colors shadow-lg shadow-amber-900/40">
                 🏠 내 분담금 계산
+              </Link>
+              <Link to="/gis-analysis"
+                className="bg-emerald-500 hover:bg-emerald-400 text-white px-8 py-4 rounded-xl text-base font-semibold transition-colors shadow-lg shadow-emerald-900/40">
+                🗺️ GIS 분석 · 감정평가
               </Link>
               <Link to="/apply"
                 className="bg-white/10 hover:bg-white/20 text-white/80 border border-white/30 backdrop-blur-sm px-6 py-4 rounded-xl text-sm font-medium transition-colors">
