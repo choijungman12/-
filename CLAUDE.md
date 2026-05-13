@@ -112,6 +112,12 @@ The UI contains real legal references. Don't paraphrase them away:
 
 7 stages in `Dashboard.tsx`: 정비계획 수립 → 추진위원회 승인 → 조합 설립 → 사업시행 → 관리처분 → 착공/준공 → 이전고시/청산. Current project stage: the first one. Don't shuffle the order.
 
+## Session/environment gotchas
+
+- **Bash tool cwd resets between turns.** Each `Bash` call starts in `C:\Users\USER` (home), not the project. If you run `npm install <pkg>` without `cd`, packages install into the wrong `node_modules` and your local build will pass via parent-directory fallback while CI fails. **Always start commands with `cd "/c/Users/USER/workspace-redev" && ...`** (or whatever the project root is) and verify `package.json` actually changed before committing.
+- **Temp folder gets wiped between sessions.** `C:\Users\USER\AppData\Local\Temp\repo-*` has been observed to lose its working tree between disconnected sessions. For long-lived work, clone into `C:\Users\USER\workspace-redev` (or similar non-temp path). The remote (`https://github.com/choijungman12/-.git`) is the source of truth either way.
+- **Verifying a dependency commit landed**: after pushing a feature that adds an npm package, check `git show <sha> --stat` and confirm `package.json` and `package-lock.json` appear in the file list. If they don't, the next CI will fail.
+
 ## Working-style conventions
 
 - **User speaks Korean; respond in Korean.**
